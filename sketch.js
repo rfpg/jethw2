@@ -143,9 +143,9 @@ class Player {
             }
         } else if (this.mover == "arrow") {
             if (keyIsPressed) {
-                if (keyCode == LEFT) {
+                if (keyCode == LEFT_ARROW) {
                     this.vx = -this.speed;
-                } else if (keyCode == RIGHT) {
+                } else if (keyCode == RIGHT_ARROW) {
                     this.vx = this.speed;
                 }
             } else {
@@ -167,7 +167,7 @@ class Player {
             }
         } else if (this.mover == "arrow") {
             if (keyIsPressed) {
-                if (keyCode == UP) {
+                if (keyCode == UP_ARROW) {
                     this.jumping = true;
                 }
             }
