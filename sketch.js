@@ -216,7 +216,7 @@ class Player {
     }
 }
 
-// Globals (initialized properly for JS)
+// Globals (initialized safely — don't call p5 functions at global eval time)
 let coin;
 
 let platformList = [];
@@ -233,17 +233,24 @@ let player2;
 let gameStart = true;
 let gameOver = false;
 
-let startS = second();
+// DON'T call p5 functions (second(), minute(), millis(), etc.) here.
+// Initialize them in setup() instead.
+let startS = 0;
 let timeS;
-let startM = minute();
+let startM = 0;
 let timeM;
-let m = millis() / 1000;
+let m = 0;
 let i;
 
 function setup() {
     createCanvas(800, 800);
     ellipseMode(CORNER);
     rectMode(CORNER);
+
+    // initialize p5-derived time variables now that p5 is ready
+    startS = second();
+    startM = minute();
+    m = millis() / 1000;
 
     // initialize coin and platforms into the already-declared globals
     coin = new Coin(int(random(790)) + 5, int(random(650)) + 100);
