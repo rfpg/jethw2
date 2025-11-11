@@ -19,6 +19,49 @@ class Coin {
         this.right = 0;
 
         this.activate = false;
+
+        // gravity / fall properties
+        this.vy = 0;
+        this.gravity = 0.6;
+        this.maxVy = 12;
+        this.onPlatform = false;
+    }
+
+    update(platformList) {
+        // apply gravity if not on a platform
+        if (!this.onPlatform) {
+            this.vy = min(this.vy + this.gravity, this.maxVy);
+            this.y += this.vy;
+        }
+
+        // update bounds
+        this.top = this.y;
+        this.bottom = this.y + this.h;
+        this.left = this.x;
+        this.right = this.x + this.w;
+
+        // check collision with platforms so the coin can land on them
+        this.onPlatform = false;
+        for (let p of platformList) {
+            if (this.left <= p.right && this.right >= p.left && this.top <= p.bottom && this.bottom >= p.top) {
+                // place coin on top of platform and stop falling
+                this.onPlatform = true;
+                this.vy = 0;
+                this.y = p.top - this.h;
+                this.top = this.y;
+                this.bottom = this.y + this.h;
+                break;
+            }
+        }
+
+        // prevent falling past bottom of canvas
+        if (this.y + this.h > height) {
+            this.y = height - this.h;
+            this.vy = 0;
+            this.onPlatform = true;
+            this.top = this.y;
+            this.bottom = this.y + this.h;
+        }
     }
 
     display() {
@@ -26,6 +69,7 @@ class Coin {
         stroke(255);
         fill(this.c);
 
+        // bounds are maintained in update(); still safe to ensure they match
         this.top = this.y;
         this.bottom = this.y + this.h;
         this.left = this.x;
@@ -100,13 +144,18 @@ class Player {
         this.vx = 0;
         this.vy = 0;
 
-        this.speed = 5;
-        this.jH = 125;
-        this.topY = y - this.jH;
+        // physics
+        this.speed = 5;      // horizontal speed
+        this.gravity = 0.8;
+        this.jumpSpeed = 14; // initial jump impulse
+        this.maxVy = 14;
 
         this.jumping = false;
         this.falling = false;
         this.onPlatform = false;
+
+        // request jump flag so we only start jump once per key press
+        this.requestJump = false;
     }
 
     display() {
@@ -127,7 +176,7 @@ class Player {
     }
 
     xMove() {
-        // apply velocity first, then constrain
+        // apply horizontal velocity
         this.x += this.vx;
         this.x = int(constrain(this.x, 0, width - this.s));
 
@@ -155,63 +204,55 @@ class Player {
     }
 
     yMove() {
-        // apply velocity and constrain
-        this.y += this.vy;
-        this.y = constrain(this.y, 0, 1000);
-
-        if (this.mover == "wasd") {
-            if (keyIsPressed) {
-                if (key == 'w' || key == 'W') {
-                    this.jumping = true;
-                }
-            }
-        } else if (this.mover == "arrow") {
-            if (keyIsPressed) {
-                if (keyCode == UP_ARROW) {
-                    this.jumping = true;
-                }
-            }
+        // handle jump request: turn request into a single impulse if standing
+        if (this.requestJump && !this.falling && !this.jumping && this.onPlatform) {
+            this.jumping = true;
+            this.vy = -this.jumpSpeed;
         }
+        this.requestJump = false;
 
-        if (this.y <= this.topY) {
+        // apply gravity and vertical velocity
+        this.vy += this.gravity;
+        this.vy = constrain(this.vy, -this.maxVy, this.maxVy);
+        this.y += this.vy;
+
+        // update flags from velocity
+        if (this.vy > 0) {
             this.jumping = false;
             this.falling = true;
-        }
-
-        if (this.jumping == true) {
-            this.vy = -this.speed;
+        } else if (this.vy < 0) {
             this.falling = false;
         }
 
-        if (this.falling == true) {
-            this.vy = this.speed;
-        }
+        // keep player within a reasonable vertical range
+        this.y = constrain(this.y, 0, 1000);
+
+        // update bounds (display also updates bounds but make sure they're set)
+        this.top = this.y;
+        this.bottom = this.y + this.h;
+        this.left = this.x;
+        this.right = this.x + this.s;
     }
 
     fall(platformList) {
-        if (this.jumping == false) {
+        // check whether player is on any platform; if not, set falling true
+        if (!this.jumping) {
             this.onPlatform = false;
 
             for (let platform of platformList) {
                 if (this.top <= platform.bottom && this.bottom >= platform.top && this.left <= platform.right && this.right >= platform.left) {
                     this.onPlatform = true;
-                    // ensure collision resolves (stop falling)
                     this.falling = false;
                     this.vy = 0;
                     break;
                 }
             }
 
-            if (this.onPlatform == false) {
+            if (!this.onPlatform) {
                 this.falling = true;
             }
         } else {
             this.onPlatform = false;
-        }
-
-        if (this.onPlatform == true) {
-            // update jump ceiling relative to current position
-            this.topY = this.y - this.jH;
         }
     }
 }
@@ -281,17 +322,29 @@ function setup() {
 function draw() {
     background(13, 18, 54);
 
+    // Update players first so their bounds are current for collisions
+    player1.xMove();
+    player1.yMove();
+    player1.display();
+
+    player2.xMove();
+    player2.yMove();
+    player2.display();
+
+    // Update coin physics (so it can land on platforms) and display it
+    coin.update(platformList);
     coin.display();
     coin.collision(player1);
     coin.collision(player2);
 
+    // Display platforms and resolve platform collisions against up-to-date player bounds
     for (let platform of platformList) {
         platform.display();
         platform.collision(player1);
         platform.collision(player2);
     }
 
-    // if coin was collected, randomize platforms and move coin
+    // if coin was collected, randomize platforms and move coin (reset its velocity)
     if (coin.activate == true) {
         for (let platform of platformList) {
             if (platform !== platformF) {
@@ -300,17 +353,13 @@ function draw() {
         }
         coin.x = int(random(800));
         coin.y = int(random(800));
+        coin.vy = 0;
+        coin.onPlatform = false;
         coin.activate = false;
     }
 
-    player1.display();
-    player1.xMove();
-    player1.yMove();
+    // After collisions, update fall state derived from platform overlaps
     player1.fall(platformList);
-
-    player2.display();
-    player2.xMove();
-    player2.yMove();
     player2.fall(platformList);
 
     if (gameStart == true) {
@@ -396,5 +445,17 @@ function draw() {
                 platform.w = int(random(40)) * 10;
             }
         }
+    }
+}
+
+// handle jump input once per key press
+function keyPressed() {
+    // WASD player jump
+    if (key == 'w' || key == 'W') {
+        player1.requestJump = true;
+    }
+    // Arrow player jump
+    if (keyCode == UP_ARROW) {
+        player2.requestJump = true;
     }
 }
