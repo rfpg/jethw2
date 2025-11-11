@@ -321,12 +321,12 @@ function draw() {
         fill(255);
         textAlign(CENTER, CENTER);
 
-        myFont = createFont("Comic Sans MS", 80);
-        textFont(myFont);
+        // Use system/browser font name and set text size instead of createFont()
+        textFont("Comic Sans MS");
+        textSize(80);
         text("CLICK TO START", width / 2, height / 2);
 
-        myFont = createFont("Comic Sans MS", 20);
-        textFont(myFont);
+        textSize(20);
         text("WASD for yellow", 200, 600);
         text("ARROWS for purple", 550, 600);
 
@@ -347,12 +347,11 @@ function draw() {
         fill(255);
         textAlign(CENTER, CENTER);
 
-        myFont = createFont("Comic Sans MS", 100);
-        textFont(myFont);
+        textFont("Comic Sans MS");
+        textSize(100);
         text("GAME OVER", width / 2, height / 2);
 
-        myFont = createFont("Comic Sans MS", 50);
-        textFont(myFont);
+        textSize(50);
         text("click anywhere to reset", width / 2, (height / 2) + 100);
 
         if (mouseIsPressed) {
